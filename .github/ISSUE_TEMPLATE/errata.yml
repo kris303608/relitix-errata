@@ -1,0 +1,111 @@
+name: Errata — report something
+description: Anything wrong, missing, confusing, or worth building on the new platform.
+title: "[errata] "
+labels: ["errata", "status:inbox"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One item per report. Your answers save the moment you submit — there is nothing
+        to copy, send, or keep track of afterwards.
+
+  - type: input
+    id: screen
+    attributes:
+      label: Where did you see it?
+      description: Paste the address bar from the exact screen. This is the single most useful thing you can give us.
+      placeholder: https://app.staging.relitix.com/app/command-center
+    validations:
+      required: true
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got instead. Screenshots welcome — drag them in.
+      placeholder: |
+        1. Ran a max-production search with a 10 mile radius
+        2. Cleared the search and changed MLS
+        3. Ran another max-production search
+
+        Expected: only offices in the new MLS
+        Actual: an office from the previous MLS was still selectable
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: What kind of thing is it?
+      options:
+        - Bug — something is broken or wrong
+        - UI/UX — confusing, awkward, or badly laid out
+        - Feature — something missing that should exist
+        - Data — numbers or records look wrong
+        - AI/Model — a score or generated text is wrong, not broken
+        - Performance — slow, hangs, or times out
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How bad is it?
+      description: Judge blast radius, not how hard it looks to fix. A one-word copy change on a screen every customer sees can be critical.
+      options:
+        - P2 — medium, should be fixed
+        - P0 — critical, customers are hitting this now
+        - P1 — high, blocks a real workflow
+        - P3 — low, cosmetic or nice to have
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the platform?
+      description: Best guess is fine — we re-label during triage.
+      options:
+        - "Not sure"
+        - Command Center
+        - Market Intelligence
+        - Agent Profile
+        - Agent Lineup
+        - Search & Filters
+        - Switch Risk
+        - Rookie Potential
+        - Coaching Cues
+        - MessageAI
+        - Alerts
+        - Office Performance
+        - Reports & Exports
+        - MLS Data Pipeline
+        - Home
+        - Sign-up
+        - Auth & Accounts
+        - Apps
+        - Admin Console
+        - Billing
+        - Onboarding
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Staging or production?
+      options:
+        - Staging
+        - Production
+      default: 0
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        Release group, owner, and due date are set during triage — you don't need them.
