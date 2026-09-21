@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: See the current backlog
+    url: ../../issues?q=is%3Aissue+is%3Aopen+label%3Aerrata
+    about: Everything filed so far, newest first. Check here before reporting a duplicate.
