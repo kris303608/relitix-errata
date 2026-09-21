@@ -1,0 +1,52 @@
+name: Errata sync
+
+# Issues are the source of truth. Every time one is filed, edited, labelled,
+# assigned or closed, regenerate errata/backlog.json and errata/BACKLOG.md so
+# the repo (and every developer's Claude Code) sees the current backlog.
+
+on:
+  issues:
+    types: [opened, edited, deleted, closed, reopened, labeled, unlabeled, assigned, unassigned]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * *" # daily safety net in case an event was missed
+
+permissions:
+  contents: write
+  issues: read
+
+concurrency:
+  group: errata-sync
+  # Regenerating is idempotent, so collapsing a burst of triage events
+  # into one run is safe and keeps Actions minutes down.
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Regenerate backlog from issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/errata-sync.mjs
+
+      - name: Commit if anything changed
+        run: |
+          if [[ -z "$(git status --porcelain errata/)" ]]; then
+            echo "No backlog change."
+            exit 0
+          fi
+          git config user.name  "errata-sync[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add errata/
+          git commit -m "errata: sync backlog from issues"
+          # Another run may have landed first; rebase rather than fail the job.
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
