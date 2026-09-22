@@ -1,0 +1,486 @@
+
+Claude finished the response
+Yes — and good news, it's more achievable than it sounded. The thing that broke on GitHub was only the save. The look — cards, columns, colors, layout — has nothing to do with window.claude. I can rebuild that same visual board as a plain HTML page that reads live data and renders it exactly that way.
+
+The one real constraint: for a page to show live data to anyone who opens the link — no typing in a password or GitHub login — the data it reads has to be reachable without credentials. Your errata repo is currently private (I set it that way on purpose, since staging URLs and bug details go in it). That gives you three real paths:
+
+Make the repo public, host the styled board on GitHub Pages — simplest, free, zero extra services. The page fetches errata/backlog.json (which the sync workflow already keeps current) and renders it in the original board's look. Downside: the link works for anyone who has it, no login wall — worth deciding if staging URLs/bug detail are fine being link-visible.
+Keep the repo private, add a small free proxy (a Cloudflare Worker) that holds a read-only GitHub token server-side and feeds the styled page — more setup (one more free account, paste in some code, still no terminal) but the data stays behind that link only, never public.
+Skip a custom page — use the native GitHub Projects board from my last message. Doesn't match the original's look, but it's already access-controlled by repo permissions and needs nothing extra built.
+Which path do you want for a live, original-look board?
+Public repo + Pages (Recommended)
+
+Ran 9 commands, read 3 files, searched 3 patterns · 2 notes
+
+Ran 9 commands, read 3 files, searched 3 patterns · 2 notes
+Built it and tested it locally before sending — here's what's true about it:
+
+It keeps the look. Same masthead, stats tiles, columns, card styling, severity stripes, production callout — pulled straight from your original board's design tokens.
+
+It's read-only by design. Cards no longer drag between columns or open an edit form — clicking one opens its GitHub issue instead. That's the trade-off for it being a real live page anyone can open: writes still go through the Issue form (the + New item button links straight to it), because that's the one path that's actually secure and reliable.
+
+It has no save code of its own — it just fetches errata/backlog.json every 60 seconds and redraws. Whatever the sync workflow produces is what's on screen, so it's never stale by more than a minute.
+
+To finish setup
+Add index.html (just sent) and a blank file named .nojekyll at the repo root — same "Add file → Create new file" process as before.
+Make the repo public: Settings → General, scroll to the bottom Danger Zone → Change visibility → Change to public → confirm.
+Turn on Pages: Settings → Pages → under Build and deployment, Source: Deploy from a branch → Branch: main, folder / (root) → Save.
+Wait ~1 minute, then your board is live at https://<your-github-username>.github.io/relitix-errata/ — that's the link to share.
+That URL is what goes to the team — no GitHub login needed to view it, only to file or triage an item.
+
+
+Index
+Code · HTML 
+Can you explain these steps with more detail? Where exactly do I go?
+
+Here's every click, in order. Start from your repo's main page (github.com/<you>/relitix-errata).
+
+1. Add index.html
+On the repo's main page, click the green <> Code button area — actually, just look for Add file near the top right of the file list (next to a Go to file search box). Click Add file → Create new file.
+A text box appears at the top labeled Name your file.... Type exactly: index.html
+(No folder, no slash — this one goes at the very top level of the repo.)
+Below that, a big empty text editor appears. Click into it and paste the full contents of the index.html file I sent you.
+Scroll to the bottom of the page. You'll see a green Commit changes... button. Click it.
+A small panel pops up asking for a commit message — the default text is fine. Click the green Commit changes button in that panel.
+2. Add .nojekyll
+Same process, one detail different:
+
+Add file → Create new file again.
+In the name box, type exactly: .nojekyll — yes, it starts with a dot and has no extension after it. GitHub will accept this as the whole filename.
+Leave the content area empty — don't type anything in it.
+Scroll down, Commit changes... → Commit changes.
+3. Make the repo public
+Near the top of the repo page, click Settings (it's in the row of tabs: Code, Issues, Pull requests, Actions, Projects, ... , Settings — Settings is usually the last one, sometimes tucked under a ⋯ if your screen is narrow).
+You'll land on the General settings page by default — that's the one you want.
+Scroll all the way to the bottom. The last section has a red border and is labeled Danger Zone.
+Inside it, find the row that says Change repository visibility and click the Change visibility button next to it.
+A popup asks you to choose — click Change to public.
+It will ask you to confirm by typing the repository name (relitix-errata) into a box to make sure you mean it. Type it exactly, then click the confirm button.
+4. Turn on GitHub Pages
+Still in Settings, look at the left-hand sidebar (a list of settings sections: General, Collaborators, Branches, Actions, Webhooks, ... ). Find and click Pages.
+Under the Build and deployment heading, there's a dropdown labeled Source. Make sure it's set to Deploy from a branch.
+Just below that, two dropdowns appear: Branch. Set the first to main and the second (the folder one, next to it) to / (root).
+Click Save.
+The page will show a message like "Your site is being built" or similar — that can take 30–60 seconds. Refresh the Settings → Pages screen after a minute; when it's ready, a box near the top will say Your site is live at followed by a link.
+That link — something like https://kriskcoe.github.io/relitix-errata/ — is the one to bookmark and send to the team.
+
+One thing to sanity-check afterward: open that link. If the board loads but every column says "Empty," that's fine — it means Pages worked but the sync workflow hasn't run yet (it only runs when an issue is filed or edited). File your test item from earlier steps, wait a minute, then refresh the link.
+
+
+
+Write a message…
+
+
+
+
+Index · HTML
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relitix Errata Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body,h1,h2,h3,p,figure,ul,ol{margin:0;padding:0}
+ul,ol{list-style:none}
+button,input,select{font:inherit;color:inherit}
+img,svg{max-width:100%;display:block}
+ 
+:root{
+  --bg:#F3F5F2; --panel:#FFFFFF; --panel-2:#FAFBF9; --panel-3:#EFF2EE;
+  --ink:#141F1D; --ink-2:#3D4B48; --muted:#6C7B77;
+  --line:#DCE3DE; --line-2:#C5CFC9;
+  --accent:#0E6E76; --accent-ink:#0A555B; --accent-soft:#E1EFEF; --on-accent:#FFFFFF;
+  --p0:#B23A2D; --p1:#BE6E22; --p2:#93801E; --p3:#67797F;
+  --p0-bg:#FAE8E5; --p1-bg:#FAF0E3; --p2-bg:#F5F2DF; --p3-bg:#EBF0F1;
+  --shadow:0 1px 2px rgba(20,31,29,.06),0 4px 14px rgba(20,31,29,.05);
+  --shadow-lg:0 8px 24px rgba(20,31,29,.12),0 2px 6px rgba(20,31,29,.08);
+  --grid:rgba(20,31,29,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0E1413; --panel:#161E1C; --panel-2:#1B2422; --panel-3:#121A18;
+    --ink:#E7EDE9; --ink-2:#BDC9C4; --muted:#8A9A95;
+    --line:#243230; --line-2:#31423E;
+    --accent:#43AEB4; --accent-ink:#8AD6DA; --accent-soft:#12302F; --on-accent:#0B1413;
+    --p0:#E87C6D; --p1:#DE9A5B; --p2:#CBB055; --p3:#93A7AE;
+    --p0-bg:#2C1714; --p1-bg:#2A1E12; --p2-bg:#262215; --p3-bg:#1A2326;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 16px rgba(0,0,0,.35);
+    --shadow-lg:0 12px 32px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.4);
+    --grid:rgba(255,255,255,.035);
+  }
+}
+ 
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Instrument Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh; display:flex; flex-direction:column;
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+ 
+#app-root{flex:1 1 auto;display:flex;flex-direction:column;min-height:100vh}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.lbl{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+ 
+/* ---------- masthead ---------- */
+.mast{
+  display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end;justify-content:space-between;
+  padding:26px 24px 20px;border-bottom:1px solid var(--line);background:var(--panel-3);
+}
+.wordmark{font-family:"Instrument Serif",Georgia,serif;font-size:15px;letter-spacing:.02em;color:var(--accent-ink);margin-bottom:10px}
+.mast h1{font-family:"Instrument Serif",Georgia,"Times New Roman",serif;font-weight:400;font-size:38px;line-height:1;letter-spacing:-.01em;text-wrap:balance}
+.mast .sub{color:var(--muted);font-size:13px;margin-top:8px;max-width:52ch}
+.stage{display:inline-block;margin-top:10px;font-family:"IBM Plex Mono",monospace;font-size:11px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--accent);text-decoration:none;
+  border-bottom:1px solid var(--accent-soft);padding-bottom:2px}
+.stage:hover{border-bottom-color:var(--accent)}
+.stats{display:flex;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.stat{background:var(--panel);padding:10px 15px 11px;min-width:88px}
+.stat .n{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:24px;font-weight:500;line-height:1.1;letter-spacing:-.02em}
+.stat.crit .n{color:var(--p0)}
+.stat.warn .n{color:var(--p1)}
+.stat .k{margin-top:2px}
+ 
+/* ---------- toolbar ---------- */
+.bar{
+  position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  padding:10px 24px;background:var(--panel);border-bottom:1px solid var(--line);
+}
+.bar .spacer{flex:1 1 auto}
+.field{position:relative;display:flex;align-items:center}
+input[type="search"],select{
+  background:var(--panel-2);border:1px solid var(--line-2);border-radius:5px;
+  padding:6px 9px;font-size:13px;color:var(--ink);
+}
+input::placeholder{color:var(--muted)}
+select{cursor:pointer;padding-right:24px;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 13px) 52%,calc(100% - 9px) 52%;
+  background-size:4px 4px,4px 4px;background-repeat:no-repeat}
+#q{width:196px}
+ 
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:var(--panel-2);
+  border-radius:5px;padding:6px 11px;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;
+  transition:background .12s ease,border-color .12s ease}
+.btn:hover{background:var(--panel-3);border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-ink);border-color:var(--accent-ink);color:var(--on-accent)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:var(--panel-3)}
+ 
+.sync{display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  font-family:"IBM Plex Mono",monospace;color:var(--muted);padding:0 4px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
+.sync[data-s="live"] .dot{background:var(--accent)}
+.sync[data-s="loading"] .dot{background:var(--p2);animation:pulse 1s ease-in-out infinite}
+.sync[data-s="error"] .dot{background:var(--p0)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+ 
+/* ---------- board ---------- */
+.board-wrap{
+  background-color:var(--bg);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px;
+  padding:18px 24px 8px; flex:1 1 auto; display:flex; flex-direction:column;
+}
+.board{display:flex;gap:14px;align-items:flex-start;overflow-x:auto;padding-bottom:14px;scrollbar-width:thin}
+.col{flex:1 0 232px;min-width:232px;max-width:340px;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.col-h{display:flex;align-items:baseline;gap:8px;padding:11px 13px 9px;border-bottom:1px solid var(--line)}
+.col-h .nm{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.col-h .ct{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.col-h .rule{flex:1;height:1px;background:var(--line-2);opacity:.7}
+.col-b{padding:9px;display:flex;flex-direction:column;gap:8px;min-height:76px}
+.empty{color:var(--muted);font-size:12px;text-align:center;padding:18px 8px;border:1px dashed var(--line-2);border-radius:6px}
+ 
+.card{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
+  padding:9px 11px 9px 14px;cursor:default;overflow:hidden;text-decoration:none;display:block;color:inherit;
+  transition:transform .1s ease,border-color .12s ease,box-shadow .12s ease}
+.card:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-1px)}
+.card .stripe{position:absolute;left:0;top:0;bottom:0;width:3px}
+.card.p0 .stripe{background:var(--p0)} .card.p1 .stripe{background:var(--p1)}
+.card.p2 .stripe{background:var(--p2)} .card.p3 .stripe{background:var(--p3)}
+.card-top{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.ref{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--muted);letter-spacing:.03em}
+.icn{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--line-2);
+  border-radius:3px;padding:0 3px;line-height:1.5}
+.icn:hover{color:var(--accent);border-color:var(--accent)}
+.prod{font-family:"IBM Plex Mono",monospace;font-size:9.5px;font-weight:600;letter-spacing:.06em;
+  color:var(--p0);border:1px solid var(--p0);border-radius:3px;padding:0 4px}
+.sev{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;letter-spacing:.06em;
+  padding:1px 5px;border-radius:3px;margin-left:auto}
+.sev.p0{color:var(--p0);background:var(--p0-bg)} .sev.p1{color:var(--p1);background:var(--p1-bg)}
+.sev.p2{color:var(--p2);background:var(--p2-bg)} .sev.p3{color:var(--p3);background:var(--p3-bg)}
+.card h3{font-size:13.5px;font-weight:600;line-height:1.35;letter-spacing:-.005em;text-wrap:balance}
+.card-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-family:"IBM Plex Mono",monospace;font-size:10px;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);
+  border:1px solid var(--line-2);border-radius:3px;padding:1px 5px}
+.tag.rel{color:var(--muted)}
+.area{font-size:11px;color:var(--muted)}
+.card-foot{display:flex;align-items:center;gap:9px;margin-top:8px;padding-top:7px;border-top:1px solid var(--line);
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--muted)}
+.card-foot .rt{margin-left:auto}
+ 
+.hint{margin-top:auto;padding:16px 0 6px;color:var(--muted);font-size:11.5px;font-family:"IBM Plex Mono",monospace;letter-spacing:.02em}
+.hint b{color:var(--ink-2);font-weight:500}
+ 
+.notice{margin:0 24px 12px;padding:10px 13px;border:1px solid var(--p1);background:var(--p1-bg);color:var(--ink);
+  border-radius:6px;font-size:12.5px;line-height:1.5}
+.notice.loud{border-width:2px;border-color:var(--p0);background:var(--p0-bg)}
+.notice.loud strong{display:block;font-size:13.5px;margin-bottom:3px}
+.notice a{color:inherit;font-weight:600}
+.notice.err{border-color:var(--p0);background:var(--p0-bg)}
+ 
+@media (max-width:720px){
+  .mast{padding:20px 16px 16px;gap:18px}
+  .mast h1{font-size:30px}
+  .stats{width:100%;flex-wrap:wrap}
+  .bar{padding:8px 16px}
+  .board-wrap{padding:14px 16px 8px}
+}
+</style>
+</head>
+<body>
+<div id="app-root">
+  <header class="mast">
+    <div>
+      <div class="wordmark">RELITIX</div>
+      <h1>Errata Board</h1>
+      <p class="sub">Live triage queue for the recruiting &amp; retention refactor — bugs, gaps, rough edges, and ideas worth building.</p>
+      <a class="stage" id="repo-link" href="#" target="_blank" rel="noopener">View backlog on GitHub <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+ 
+  <div class="bar">
+    <div class="field"><input type="search" id="q" placeholder="Search title, area, owner…" aria-label="Search items"></div>
+    <select id="f-type" aria-label="Filter by type"></select>
+    <select id="f-sev" aria-label="Filter by severity"></select>
+    <select id="f-area" aria-label="Filter by area"></select>
+    <select id="f-release" aria-label="Filter by release"></select>
+    <button class="btn ghost" id="clear" type="button">Clear</button>
+    <div class="spacer"></div>
+    <div class="sync" id="sync" data-s="loading"><span class="dot"></span><span class="txt">Loading</span></div>
+    <a class="btn primary" id="new-item" href="#" target="_blank" rel="noopener">+ New item</a>
+  </div>
+ 
+  <div id="notice"></div>
+ 
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+    <p class="hint">Read-only view, refreshes automatically · click a card to open its GitHub issue · to add or change something, use <b>+ New item</b> or edit the issue directly — that's what keeps this page in sync for everyone.</p>
+  </div>
+</div>
+ 
+<script>
+/* ---------- config ---------- */
+// This page is meant to be served by GitHub Pages from inside the errata repo,
+// so backlog.json is normally same-origin. ?src= overrides it if you host the
+// page somewhere else; ?repo=owner/name overrides the repo it links out to.
+var params = new URLSearchParams(location.search);
+var SRC = params.get("src") || "errata/backlog.json";
+var pathParts = location.pathname.split("/").filter(Boolean);
+var guessedRepo = (location.hostname.split(".")[0]) + "/" + (pathParts[0] || "");
+var REPO = params.get("repo") || guessedRepo;
+ 
+document.getElementById("repo-link").href = "https://github.com/" + REPO + "/issues?q=is%3Aopen+label%3Aerrata";
+document.getElementById("new-item").href = "https://github.com/" + REPO + "/issues/new?template=errata.yml";
+ 
+/* ---------- reference data (mirrors scripts/errata-sync.mjs) ---------- */
+var STATUSES = [
+  {k:"inbox",    n:"Inbox"},
+  {k:"triaged",  n:"Triaged"},
+  {k:"progress", n:"In Progress"},
+  {k:"review",   n:"In Review"},
+  {k:"done",     n:"Done"}
+];
+var TYPES = [
+  {k:"bug",n:"Bug"},{k:"feature",n:"Feature"},{k:"ux",n:"UI/UX"},
+  {k:"data",n:"Data"},{k:"ai",n:"AI/Model"},{k:"perf",n:"Perf"}
+];
+var SEVS = [
+  {k:"p0",n:"P0",l:"Critical"},{k:"p1",n:"P1",l:"High"},{k:"p2",n:"P2",l:"Medium"},{k:"p3",n:"P3",l:"Low"}
+];
+ 
+var doc = {items:[]};
+var ui = {q:"",type:"",sev:"",area:"",release:""};
+ 
+/* ---------- helpers ---------- */
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function nameOf(list,k){ for(var i=0;i<list.length;i++){ if(list[i].k===k) return list[i].n; } return k; }
+function initials(s){
+  s = (s||"").trim(); if(!s) return "—";
+  var p = s.split(/\s+/);
+  return (p.length > 1 ? (p[0][0]+p[1][0]) : s.slice(0,2)).toUpperCase();
+}
+function rel(iso){
+  if(!iso) return "";
+  var ms = Date.now() - new Date(iso).getTime();
+  if(isNaN(ms)) return "";
+  var m = Math.floor(ms/60000);
+  if(m < 1) return "now";
+  if(m < 60) return m + "m";
+  var h = Math.floor(m/60); if(h < 24) return h + "h";
+  var d = Math.floor(h/24); if(d < 30) return d + "d";
+  return Math.floor(d/30) + "mo";
+}
+function uniq(getter){
+  var seen = {}, out = [];
+  doc.items.forEach(function(it){ var v = getter(it); if(v && !seen[v]){ seen[v]=1; out.push(v); } });
+  return out;
+}
+ 
+/* ---------- filters ---------- */
+function fillSelect(id, list, allLabel){
+  var s = document.getElementById(id);
+  var h = '<option value="">' + esc(allLabel) + '</option>';
+  list.forEach(function(o){ h += '<option value="' + o.k + '">' + esc(o.n + (o.l ? " · " + o.l : "")) + '</option>'; });
+  s.innerHTML = h; s.value = "";
+}
+function fillListSelect(id, values, allLabel, key){
+  var s = document.getElementById(id);
+  var cur = ui[key] || "";
+  var h = '<option value="">' + esc(allLabel) + '</option>';
+  values.forEach(function(a){ h += '<option value="' + esc(a) + '">' + esc(a) + '</option>'; });
+  s.innerHTML = h; s.value = values.indexOf(cur) !== -1 ? cur : "";
+}
+function bindFilter(id, key){
+  document.getElementById(id).addEventListener("change", function(e){ ui[key] = e.target.value; paintBoard(); });
+}
+function matches(it){
+  if(ui.type && it.type !== ui.type) return false;
+  if(ui.sev && it.severity !== ui.sev) return false;
+  if(ui.area && it.area !== ui.area) return false;
+  if(ui.release && it.release !== ui.release) return false;
+  if(ui.q){
+    var hay = (it.ref + " " + it.title + " " + (it.detail||"") + " " + (it.area||"") + " "
+             + (it.owner||"") + " " + (it.reporter||"")).toLowerCase();
+    if(hay.indexOf(ui.q.toLowerCase()) === -1) return false;
+  }
+  return true;
+}
+var SEV_ORDER = {p0:0,p1:1,p2:2,p3:3};
+function sortItems(a,b){
+  var d = (SEV_ORDER[a.severity]||9) - (SEV_ORDER[b.severity]||9);
+  if(d) return d;
+  return String(b.updated||"").localeCompare(String(a.updated||""));
+}
+ 
+/* ---------- painting ---------- */
+function paintStats(){
+  var open=0, hot=0, wip=0, prod=0, done=0;
+  doc.items.forEach(function(it){
+    if(it.status === "done"){ done++; return; }
+    open++;
+    if(it.severity === "p0" || it.severity === "p1") hot++;
+    if(it.status === "progress" || it.status === "review") wip++;
+    if(it.environment === "Production") prod++;
+  });
+  var tiles = [
+    {n:open, k:"Open", c:""},
+    {n:hot,  k:"P0 · P1", c:hot ? "crit" : ""},
+    {n:wip,  k:"In flight", c:""},
+    {n:prod, k:"On prod", c:prod ? "warn" : ""},
+    {n:done, k:"Done", c:""}
+  ];
+  document.getElementById("stats").innerHTML = tiles.map(function(t){
+    return '<div class="stat ' + t.c + '"><div class="n">' + t.n + '</div><div class="k lbl">' + esc(t.k) + '</div></div>';
+  }).join("");
+ 
+  var n = document.getElementById("notice");
+  var prodItems = doc.items.filter(function(i){ return i.status !== "done" && i.environment === "Production"; });
+  n.innerHTML = prodItems.length
+    ? '<div class="notice loud"><strong>' + prodItems.length + ' on production right now</strong>'
+      + prodItems.map(function(i){ return ' <a href="' + esc(i.issue_url) + '" target="_blank" rel="noopener">' + esc(i.ref) + '</a>'; }).join(",")
+      + '</div>'
+    : "";
+}
+ 
+function cardHtml(it){
+  var sev = it.severity || "p2";
+  return '<a class="card ' + esc(sev) + '" href="' + esc(it.issue_url || "#") + '" target="_blank" rel="noopener">'
+    + '<span class="stripe"></span>'
+    + '<div class="card-top"><span class="ref">' + esc(it.ref) + '</span>'
+    + (it.environment === "Production" ? '<span class="prod">PROD</span>' : '')
+    + '<span class="sev ' + esc(sev) + '">' + esc(sev.toUpperCase()) + '</span></div>'
+    + '<h3>' + esc(it.title) + '</h3>'
+    + '<div class="card-meta"><span class="tag">' + esc(nameOf(TYPES, it.type)) + '</span>'
+    + (it.release ? '<span class="tag rel">' + esc(it.release) + '</span>' : '')
+    + (it.area ? '<span class="area">' + esc(it.area) + '</span>' : '') + '</div>'
+    + '<div class="card-foot"><span title="' + esc(it.owner || "unassigned") + '">' + esc(initials(it.owner)) + '</span>'
+    + (it.comments ? '<span>' + it.comments + ' note' + (it.comments>1?"s":"") + '</span>' : '')
+    + '<span class="rt">' + esc(rel(it.updated || it.created)) + '</span></div>'
+    + '</a>';
+}
+ 
+function paintBoard(){
+  var board = document.getElementById("board");
+  var visible = doc.items.filter(matches);
+  board.innerHTML = STATUSES.map(function(s){
+    var list = visible.filter(function(i){ return i.status === s.k; }).sort(sortItems);
+    var total = doc.items.filter(function(i){ return i.status === s.k; }).length;
+    var count = list.length === total ? String(total) : list.length + "/" + total;
+    var body = list.length
+      ? list.map(cardHtml).join("")
+      : '<div class="empty">' + (total ? "No match for these filters" : "Empty") + '</div>';
+    return '<section class="col"><div class="col-h"><span class="nm">' + esc(s.n) + '</span><span class="rule"></span><span class="ct">' + count + '</span></div>'
+      + '<div class="col-b">' + body + '</div></section>';
+  }).join("");
+}
+ 
+function paintSync(state, msg){
+  var el = document.getElementById("sync");
+  el.setAttribute("data-s", state);
+  var txt = {loading:"Loading", live:"Live · synced " + (rel(doc.generated) || "now"), error:"Not reachable"}[state] || state;
+  el.querySelector(".txt").textContent = txt;
+  el.title = msg || "";
+}
+ 
+/* ---------- fetch loop ---------- */
+function refresh(first){
+  if(first) paintSync("loading");
+  fetch(SRC + (SRC.indexOf("?")===-1 ? "?" : "&") + "t=" + Date.now(), {cache:"no-store"})
+    .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function(json){
+      doc = json && Array.isArray(json.items) ? json : {items:[]};
+      fillSelect("f-type", TYPES, "All types");
+      fillSelect("f-sev", SEVS, "All severities");
+      fillListSelect("f-area", uniq(function(i){return i.area;}).sort(), "All areas", "area");
+      fillListSelect("f-release", uniq(function(i){return i.release;}).sort(), "All releases", "release");
+      paintStats(); paintBoard(); paintSync("live");
+    })
+    .catch(function(e){
+      paintSync("error", String(e.message || e));
+      if(first){
+        document.getElementById("notice").innerHTML =
+          '<div class="notice err"><strong>Couldn\'t load the backlog.</strong> Checked <code>' + esc(SRC)
+          + '</code> — confirm the repo is public and the Errata sync workflow has run at least once. '
+          + '<a href="https://github.com/' + esc(REPO) + '/actions" target="_blank" rel="noopener">Check Actions</a></div>';
+      }
+    });
+}
+ 
+document.getElementById("q").addEventListener("input", function(e){ ui.q = e.target.value; paintBoard(); });
+bindFilter("f-type","type"); bindFilter("f-sev","sev");
+bindFilter("f-area","area"); bindFilter("f-release","release");
+document.getElementById("clear").addEventListener("click", function(){
+  ui.q = ui.type = ui.sev = ui.area = ui.release = "";
+  ["q","f-type","f-sev","f-area","f-release"].forEach(function(id){ document.getElementById(id).value = ""; });
+  paintBoard();
+});
+ 
+refresh(true);
+setInterval(function(){ refresh(false); }, 60000);
+</script>
+</body>
+</html>
+ 
