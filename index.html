@@ -1,79 +1,3 @@
-
-Claude finished the response
-Yes — and good news, it's more achievable than it sounded. The thing that broke on GitHub was only the save. The look — cards, columns, colors, layout — has nothing to do with window.claude. I can rebuild that same visual board as a plain HTML page that reads live data and renders it exactly that way.
-
-The one real constraint: for a page to show live data to anyone who opens the link — no typing in a password or GitHub login — the data it reads has to be reachable without credentials. Your errata repo is currently private (I set it that way on purpose, since staging URLs and bug details go in it). That gives you three real paths:
-
-Make the repo public, host the styled board on GitHub Pages — simplest, free, zero extra services. The page fetches errata/backlog.json (which the sync workflow already keeps current) and renders it in the original board's look. Downside: the link works for anyone who has it, no login wall — worth deciding if staging URLs/bug detail are fine being link-visible.
-Keep the repo private, add a small free proxy (a Cloudflare Worker) that holds a read-only GitHub token server-side and feeds the styled page — more setup (one more free account, paste in some code, still no terminal) but the data stays behind that link only, never public.
-Skip a custom page — use the native GitHub Projects board from my last message. Doesn't match the original's look, but it's already access-controlled by repo permissions and needs nothing extra built.
-Which path do you want for a live, original-look board?
-Public repo + Pages (Recommended)
-
-Ran 9 commands, read 3 files, searched 3 patterns · 2 notes
-
-Ran 9 commands, read 3 files, searched 3 patterns · 2 notes
-Built it and tested it locally before sending — here's what's true about it:
-
-It keeps the look. Same masthead, stats tiles, columns, card styling, severity stripes, production callout — pulled straight from your original board's design tokens.
-
-It's read-only by design. Cards no longer drag between columns or open an edit form — clicking one opens its GitHub issue instead. That's the trade-off for it being a real live page anyone can open: writes still go through the Issue form (the + New item button links straight to it), because that's the one path that's actually secure and reliable.
-
-It has no save code of its own — it just fetches errata/backlog.json every 60 seconds and redraws. Whatever the sync workflow produces is what's on screen, so it's never stale by more than a minute.
-
-To finish setup
-Add index.html (just sent) and a blank file named .nojekyll at the repo root — same "Add file → Create new file" process as before.
-Make the repo public: Settings → General, scroll to the bottom Danger Zone → Change visibility → Change to public → confirm.
-Turn on Pages: Settings → Pages → under Build and deployment, Source: Deploy from a branch → Branch: main, folder / (root) → Save.
-Wait ~1 minute, then your board is live at https://<your-github-username>.github.io/relitix-errata/ — that's the link to share.
-That URL is what goes to the team — no GitHub login needed to view it, only to file or triage an item.
-
-
-Index
-Code · HTML 
-Can you explain these steps with more detail? Where exactly do I go?
-
-Here's every click, in order. Start from your repo's main page (github.com/<you>/relitix-errata).
-
-1. Add index.html
-On the repo's main page, click the green <> Code button area — actually, just look for Add file near the top right of the file list (next to a Go to file search box). Click Add file → Create new file.
-A text box appears at the top labeled Name your file.... Type exactly: index.html
-(No folder, no slash — this one goes at the very top level of the repo.)
-Below that, a big empty text editor appears. Click into it and paste the full contents of the index.html file I sent you.
-Scroll to the bottom of the page. You'll see a green Commit changes... button. Click it.
-A small panel pops up asking for a commit message — the default text is fine. Click the green Commit changes button in that panel.
-2. Add .nojekyll
-Same process, one detail different:
-
-Add file → Create new file again.
-In the name box, type exactly: .nojekyll — yes, it starts with a dot and has no extension after it. GitHub will accept this as the whole filename.
-Leave the content area empty — don't type anything in it.
-Scroll down, Commit changes... → Commit changes.
-3. Make the repo public
-Near the top of the repo page, click Settings (it's in the row of tabs: Code, Issues, Pull requests, Actions, Projects, ... , Settings — Settings is usually the last one, sometimes tucked under a ⋯ if your screen is narrow).
-You'll land on the General settings page by default — that's the one you want.
-Scroll all the way to the bottom. The last section has a red border and is labeled Danger Zone.
-Inside it, find the row that says Change repository visibility and click the Change visibility button next to it.
-A popup asks you to choose — click Change to public.
-It will ask you to confirm by typing the repository name (relitix-errata) into a box to make sure you mean it. Type it exactly, then click the confirm button.
-4. Turn on GitHub Pages
-Still in Settings, look at the left-hand sidebar (a list of settings sections: General, Collaborators, Branches, Actions, Webhooks, ... ). Find and click Pages.
-Under the Build and deployment heading, there's a dropdown labeled Source. Make sure it's set to Deploy from a branch.
-Just below that, two dropdowns appear: Branch. Set the first to main and the second (the folder one, next to it) to / (root).
-Click Save.
-The page will show a message like "Your site is being built" or similar — that can take 30–60 seconds. Refresh the Settings → Pages screen after a minute; when it's ready, a box near the top will say Your site is live at followed by a link.
-That link — something like https://kriskcoe.github.io/relitix-errata/ — is the one to bookmark and send to the team.
-
-One thing to sanity-check afterward: open that link. If the board loads but every column says "Empty," that's fine — it means Pages worked but the sync workflow hasn't run yet (it only runs when an issue is filed or edited). File your test item from earlier steps, wait a minute, then refresh the link.
-
-
-
-Write a message…
-
-
-
-
-Index · HTML
 <!doctype html>
 <html lang="en">
 <head>
@@ -89,7 +13,7 @@ html,body,h1,h2,h3,p,figure,ul,ol{margin:0;padding:0}
 ul,ol{list-style:none}
 button,input,select{font:inherit;color:inherit}
 img,svg{max-width:100%;display:block}
- 
+
 :root{
   --bg:#F3F5F2; --panel:#FFFFFF; --panel-2:#FAFBF9; --panel-3:#EFF2EE;
   --ink:#141F1D; --ink-2:#3D4B48; --muted:#6C7B77;
@@ -114,7 +38,7 @@ img,svg{max-width:100%;display:block}
     --grid:rgba(255,255,255,.035);
   }
 }
- 
+
 body{
   background:var(--bg); color:var(--ink);
   font-family:"Instrument Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
@@ -124,11 +48,11 @@ body{
 }
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
- 
+
 #app-root{flex:1 1 auto;display:flex;flex-direction:column;min-height:100vh}
 .mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
 .lbl{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
- 
+
 /* ---------- masthead ---------- */
 .mast{
   display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end;justify-content:space-between;
@@ -147,7 +71,7 @@ body{
 .stat.crit .n{color:var(--p0)}
 .stat.warn .n{color:var(--p1)}
 .stat .k{margin-top:2px}
- 
+
 /* ---------- toolbar ---------- */
 .bar{
   position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;gap:8px;align-items:center;
@@ -165,7 +89,7 @@ select{cursor:pointer;padding-right:24px;appearance:none;
   background-position:calc(100% - 13px) 52%,calc(100% - 9px) 52%;
   background-size:4px 4px,4px 4px;background-repeat:no-repeat}
 #q{width:196px}
- 
+
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:var(--panel-2);
   border-radius:5px;padding:6px 11px;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;
   transition:background .12s ease,border-color .12s ease}
@@ -174,7 +98,7 @@ select{cursor:pointer;padding-right:24px;appearance:none;
 .btn.primary:hover{background:var(--accent-ink);border-color:var(--accent-ink);color:var(--on-accent)}
 .btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
 .btn.ghost:hover{color:var(--ink);background:var(--panel-3)}
- 
+
 .sync{display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
   font-family:"IBM Plex Mono",monospace;color:var(--muted);padding:0 4px}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
@@ -182,7 +106,7 @@ select{cursor:pointer;padding-right:24px;appearance:none;
 .sync[data-s="loading"] .dot{background:var(--p2);animation:pulse 1s ease-in-out infinite}
 .sync[data-s="error"] .dot{background:var(--p0)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
- 
+
 /* ---------- board ---------- */
 .board-wrap{
   background-color:var(--bg);
@@ -199,7 +123,7 @@ select{cursor:pointer;padding-right:24px;appearance:none;
 .col-h .rule{flex:1;height:1px;background:var(--line-2);opacity:.7}
 .col-b{padding:9px;display:flex;flex-direction:column;gap:8px;min-height:76px}
 .empty{color:var(--muted);font-size:12px;text-align:center;padding:18px 8px;border:1px dashed var(--line-2);border-radius:6px}
- 
+
 .card{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
   padding:9px 11px 9px 14px;cursor:default;overflow:hidden;text-decoration:none;display:block;color:inherit;
   transition:transform .1s ease,border-color .12s ease,box-shadow .12s ease}
@@ -228,17 +152,17 @@ select{cursor:pointer;padding-right:24px;appearance:none;
 .card-foot{display:flex;align-items:center;gap:9px;margin-top:8px;padding-top:7px;border-top:1px solid var(--line);
   font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--muted)}
 .card-foot .rt{margin-left:auto}
- 
+
 .hint{margin-top:auto;padding:16px 0 6px;color:var(--muted);font-size:11.5px;font-family:"IBM Plex Mono",monospace;letter-spacing:.02em}
 .hint b{color:var(--ink-2);font-weight:500}
- 
+
 .notice{margin:0 24px 12px;padding:10px 13px;border:1px solid var(--p1);background:var(--p1-bg);color:var(--ink);
   border-radius:6px;font-size:12.5px;line-height:1.5}
 .notice.loud{border-width:2px;border-color:var(--p0);background:var(--p0-bg)}
 .notice.loud strong{display:block;font-size:13.5px;margin-bottom:3px}
 .notice a{color:inherit;font-weight:600}
 .notice.err{border-color:var(--p0);background:var(--p0-bg)}
- 
+
 @media (max-width:720px){
   .mast{padding:20px 16px 16px;gap:18px}
   .mast h1{font-size:30px}
@@ -259,7 +183,7 @@ select{cursor:pointer;padding-right:24px;appearance:none;
     </div>
     <div class="stats" id="stats"></div>
   </header>
- 
+
   <div class="bar">
     <div class="field"><input type="search" id="q" placeholder="Search title, area, owner…" aria-label="Search items"></div>
     <select id="f-type" aria-label="Filter by type"></select>
@@ -271,15 +195,15 @@ select{cursor:pointer;padding-right:24px;appearance:none;
     <div class="sync" id="sync" data-s="loading"><span class="dot"></span><span class="txt">Loading</span></div>
     <a class="btn primary" id="new-item" href="#" target="_blank" rel="noopener">+ New item</a>
   </div>
- 
+
   <div id="notice"></div>
- 
+
   <div class="board-wrap">
     <div class="board" id="board"></div>
     <p class="hint">Read-only view, refreshes automatically · click a card to open its GitHub issue · to add or change something, use <b>+ New item</b> or edit the issue directly — that's what keeps this page in sync for everyone.</p>
   </div>
 </div>
- 
+
 <script>
 /* ---------- config ---------- */
 // This page is meant to be served by GitHub Pages from inside the errata repo,
@@ -290,10 +214,10 @@ var SRC = params.get("src") || "errata/backlog.json";
 var pathParts = location.pathname.split("/").filter(Boolean);
 var guessedRepo = (location.hostname.split(".")[0]) + "/" + (pathParts[0] || "");
 var REPO = params.get("repo") || guessedRepo;
- 
+
 document.getElementById("repo-link").href = "https://github.com/" + REPO + "/issues?q=is%3Aopen+label%3Aerrata";
 document.getElementById("new-item").href = "https://github.com/" + REPO + "/issues/new?template=errata.yml";
- 
+
 /* ---------- reference data (mirrors scripts/errata-sync.mjs) ---------- */
 var STATUSES = [
   {k:"inbox",    n:"Inbox"},
@@ -309,10 +233,10 @@ var TYPES = [
 var SEVS = [
   {k:"p0",n:"P0",l:"Critical"},{k:"p1",n:"P1",l:"High"},{k:"p2",n:"P2",l:"Medium"},{k:"p3",n:"P3",l:"Low"}
 ];
- 
+
 var doc = {items:[]};
 var ui = {q:"",type:"",sev:"",area:"",release:""};
- 
+
 /* ---------- helpers ---------- */
 function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
   return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
@@ -338,7 +262,7 @@ function uniq(getter){
   doc.items.forEach(function(it){ var v = getter(it); if(v && !seen[v]){ seen[v]=1; out.push(v); } });
   return out;
 }
- 
+
 /* ---------- filters ---------- */
 function fillSelect(id, list, allLabel){
   var s = document.getElementById(id);
@@ -374,7 +298,7 @@ function sortItems(a,b){
   if(d) return d;
   return String(b.updated||"").localeCompare(String(a.updated||""));
 }
- 
+
 /* ---------- painting ---------- */
 function paintStats(){
   var open=0, hot=0, wip=0, prod=0, done=0;
@@ -395,7 +319,7 @@ function paintStats(){
   document.getElementById("stats").innerHTML = tiles.map(function(t){
     return '<div class="stat ' + t.c + '"><div class="n">' + t.n + '</div><div class="k lbl">' + esc(t.k) + '</div></div>';
   }).join("");
- 
+
   var n = document.getElementById("notice");
   var prodItems = doc.items.filter(function(i){ return i.status !== "done" && i.environment === "Production"; });
   n.innerHTML = prodItems.length
@@ -404,7 +328,7 @@ function paintStats(){
       + '</div>'
     : "";
 }
- 
+
 function cardHtml(it){
   var sev = it.severity || "p2";
   return '<a class="card ' + esc(sev) + '" href="' + esc(it.issue_url || "#") + '" target="_blank" rel="noopener">'
@@ -421,7 +345,7 @@ function cardHtml(it){
     + '<span class="rt">' + esc(rel(it.updated || it.created)) + '</span></div>'
     + '</a>';
 }
- 
+
 function paintBoard(){
   var board = document.getElementById("board");
   var visible = doc.items.filter(matches);
@@ -436,7 +360,7 @@ function paintBoard(){
       + '<div class="col-b">' + body + '</div></section>';
   }).join("");
 }
- 
+
 function paintSync(state, msg){
   var el = document.getElementById("sync");
   el.setAttribute("data-s", state);
@@ -444,7 +368,7 @@ function paintSync(state, msg){
   el.querySelector(".txt").textContent = txt;
   el.title = msg || "";
 }
- 
+
 /* ---------- fetch loop ---------- */
 function refresh(first){
   if(first) paintSync("loading");
@@ -468,7 +392,7 @@ function refresh(first){
       }
     });
 }
- 
+
 document.getElementById("q").addEventListener("input", function(e){ ui.q = e.target.value; paintBoard(); });
 bindFilter("f-type","type"); bindFilter("f-sev","sev");
 bindFilter("f-area","area"); bindFilter("f-release","release");
@@ -477,10 +401,9 @@ document.getElementById("clear").addEventListener("click", function(){
   ["q","f-type","f-sev","f-area","f-release"].forEach(function(id){ document.getElementById(id).value = ""; });
   paintBoard();
 });
- 
+
 refresh(true);
 setInterval(function(){ refresh(false); }, 60000);
 </script>
 </body>
 </html>
- 
